@@ -67,6 +67,7 @@ stream_tcp = {
 -- Include other specific configurations if needed
 include 'snort_defaults.lua' -- Contains many default preprocessor settings
 -- include 'file_magic.lua' -- For file identification, less critical for these DoS attacks
+include 'file_magic.rules' -- For file identification
 
 -- Print a message to confirm loading (optional)
 print('Snort.lua configuration loaded with custom settings for DoS detection.')

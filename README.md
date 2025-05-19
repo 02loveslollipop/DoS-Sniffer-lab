@@ -39,8 +39,8 @@ graph TD
         H2_Serial -.-> SW_Console
     end
 
-    classDef host fill:#f9f,stroke:#333,stroke-width:2px;
-    classDef switch fill:#ccf,stroke:#333,stroke-width:2px;
+    classDef host stroke:#333,stroke-width:2px;
+    classDef switch stroke:#333,stroke-width:2px;
     class H1,H2,H3 host;
     class SW switch;
 ```
