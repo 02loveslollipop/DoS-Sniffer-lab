@@ -18,13 +18,13 @@ The simulation is divided into two main parts:
 ```mermaid
 graph TD
     subgraph "Network Infrastructure"
-        SW[Managed Switch]
+        SW["Managed Switch"]
     end
 
     subgraph "Hosts"
-        H1[Host1: Attacker<br>IP: 192.168.1.101]
-        H2[Host2: Sniffer/IDS<br>IP: 192.168.1.102<br>Wireshark, Snort (Docker)]
-        H3[Host3: Victim<br>IP: 192.168.1.103]
+        H1["Host1: Attacker<br>IP: 192.168.1.101"]
+        H2["Host2: Sniffer/IDS<br>IP: 192.168.1.102<br>Wireshark, Snort (Docker)"]
+        H3["Host3: Victim<br>IP: 192.168.1.103"]
     end
 
     H1 -- "Traffic to Victim" --> SW
@@ -34,8 +34,8 @@ graph TD
     H2 --- H2_SniffPort
 
     subgraph "Switch Configuration (via Host2)"
-        H2_Serial[Serial Console on Host2]
-        SW_Console[Switch Console Port]
+        H2_Serial["Serial Console on Host2"]
+        SW_Console["Switch Console Port"]
         H2_Serial -.-> SW_Console
     end
 
@@ -294,5 +294,79 @@ After completing the simulations, run the cleanup scripts on each host to revert
 *   **Snort Rules**: Modify `sniffer/rules/custom.rules` to add or refine detection rules.
 *   **Snort Configuration**: Adjust `sniffer/snort_config/snort.lua` for different logging, output, or preprocessor settings. Remember to update `HOME_NET` to your actual network range.
 *   **Attack Scripts**: The Python attack scripts in the `attacker/` directory can be modified to change attack parameters or behavior.
+
+## V. Snort Rules Explained
+
+The `sniffer/rules/custom.rules` file contains the following custom Snort 3 rules for detecting the simulated DoS attacks. Ensure `$HOME_NET` is correctly defined in your `snort.lua` configuration (e.g., `HOME_NET = '[192.168.1.0/24]'` or your specific victim network).
+
+1.  **Land Attack**
+    ```snort
+    alert tcp any any -> $HOME_NET any ( \
+        msg:"DOS Land Attack Detected (Matching IP/Port)"; \
+        flow:to_server; \
+        land; \
+        sid:1000001; \
+        rev:1; \
+        classtype:dos; \
+        metadata:service dns, service ftp, service http, service imap, service pop3, service smtp, service ssh, service telnet, service web, attack_target Server, created_at 2024_05_18, updated_at 2024_05_18; \
+    )
+    ```
+    *   **Purpose**: Detects TCP packets where the source IP address and source port are identical to the destination IP address and destination port. This is the classic signature of a Land attack.
+    *   `land;`: This is a specific Snort rule option to detect land attacks.
+
+2.  **TCP SYN Flood**
+    ```snort
+    alert tcp $EXTERNAL_NET any -> $HOME_NET any ( \
+        msg:"DOS TCP SYN Flood Detected"; \
+        flags:S,CE,U,P; \
+        flow:to_server,only_syn; \
+        detection_filter:track by_dst, count 100, seconds 10; \
+        sid:1000002; \
+        rev:1; \
+        classtype:dos; \
+        metadata:service dns, service ftp, service http, service imap, service pop3, service smtp, service ssh, service telnet, service web, attack_target Server, created_at 2024_05_18, updated_at 2024_05_18; \
+    )
+    ```
+    *   **Purpose**: Detects a high rate of TCP SYN packets sent to any port on the `$HOME_NET`.
+    *   `flags:S,CE,U,P;`: Checks for SYN packets (though `only_syn` makes this somewhat redundant, it's good practice for clarity if `only_syn` was removed).
+    *   `flow:to_server,only_syn;`: Ensures the rule only applies to SYN packets going towards the server and not part of an established session that happens to have the SYN flag (though this is unlikely).
+    *   `detection_filter:track by_dst, count 100, seconds 10;`: This is the core of the flood detection. It tracks SYN packets by their destination IP and triggers if 100 such packets are seen within 10 seconds. Adjust `count` and `seconds` based on your network and desired sensitivity.
+
+3.  **Teardrop Attack Fragments**
+    Snort's built-in IP defragmentation preprocessor (`host_ip_reassembly` in Snort 3, part of stream preprocessor) helps in normalizing fragmented traffic, which can by itself mitigate or help detect some fragmentation attacks. These rules provide more explicit checks for common Teardrop patterns.
+
+    *   **Rule 1: First Small Fragment with More Fragments Set**
+        ```snort
+        alert ip $EXTERNAL_NET any -> $HOME_NET any ( \
+            msg:"DOS Teardrop Attack Fragment Detected (MF set, offset 0, small frag)"; \
+            fragbits:M; \
+            fragoffset:0; \
+            dsize:<60; \
+            flow:to_server; \
+            sid:1000003; \
+            rev:1; \
+            classtype:dos; \
+            metadata:attack_target Server, created_at 2024_05_18, updated_at 2024_05_18; \
+        )
+        ```
+        *   **Purpose**: Detects the first fragment (offset 0) of an IP packet that has the "More Fragments" (MF) bit set and a very small data size (less than 60 bytes). This is often indicative of a Teardrop-like attack attempting to cause issues with reassembly.
+
+    *   **Rule 2: Subsequent Small Fragment with More Fragments Set**
+        ```snort
+        alert ip $EXTERNAL_NET any -> $HOME_NET any ( \
+            msg:"DOS Teardrop Attack Fragment Detected (MF set, non-zero offset, small frag)"; \
+            fragbits:M; \
+            fragoffset:>0; \
+            dsize:<60; \
+            flow:to_server; \
+            sid:1000004; \
+            rev:1; \
+            classtype:dos; \
+            metadata:attack_target Server, created_at 2024_05_18, updated_at 2024_05_18; \
+        )
+        ```
+        *   **Purpose**: Detects subsequent fragments (non-zero offset) that also have the MF bit set and a small data size. Maliciously crafted small fragments can be used in various fragmentation attacks.
+
+    *Note on Teardrop*: True Teardrop attacks involve overlapping fragment offsets. While Snort's preprocessors aim to handle these, the above rules look for common symptoms of fragmented packet abuse. More sophisticated rules might involve Lua scripting within Snort to analyze fragment offsets directly if the preprocessor doesn't flag the specific overlap technique used.
 
 This lab provides a foundation for understanding DoS attacks and IDS/IPS mechanisms. Experiment with different attack variations and Snort configurations to deepen your knowledge.
