@@ -18,66 +18,75 @@ The simulation is divided into two main parts:
 ```mermaid
 graph TD
     subgraph "Network Infrastructure"
-        SW[Network Switch]
+        SW[Managed Switch]
     end
 
     subgraph "Hosts"
-        H1[Host1: Attacker<br>e.g., 192.168.1.101]
-        H2[Host2: Sniffer/IDS<br>e.g., 192.168.1.102<br>Wireshark, Snort (Docker)]
-        H3[Host3: Victim<br>e.g., 192.168.1.103]
+        H1[Host1: Attacker<br>IP: 192.168.1.101]
+        H2[Host2: Sniffer/IDS<br>IP: 192.168.1.102<br>Wireshark, Snort (Docker)]
+        H3[Host3: Victim<br>IP: 192.168.1.103]
     end
 
-    H1 -- "Network Traffic" --> SW
-    H3 -- "Network Traffic" --> SW
-    SW -- "Mirrored Traffic (SPAN)" --> H2
-    H2 -- "Serial COM" -.-> SW_CONSOLE((Switch Console Port))
+    H1 -- "Traffic to Victim" --> SW
+    H3 -- "Traffic from Attacker" --> SW
+    SW -- "Port Mirroring (SPAN)" --> H2_SniffPort((Sniffer Port))
+    
+    H2 --- H2_SniffPort
 
-    linkStyle 2 stroke-width:2px,stroke:red,stroke-dasharray: 5 5;
-    linkStyle 3 stroke-width:2px,stroke:blue,stroke-dasharray: 5 5;
+    subgraph "Switch Configuration (via Host2)"
+        H2_Serial[Serial Console on Host2]
+        SW_Console[Switch Console Port]
+        H2_Serial -.-> SW_Console
+    end
 
     classDef host fill:#f9f,stroke:#333,stroke-width:2px;
-    class H1,H2,H3 host;
     classDef switch fill:#ccf,stroke:#333,stroke-width:2px;
-    class SW,SW_CONSOLE switch;
+    class H1,H2,H3 host;
+    class SW switch;
 ```
 
-### High-Level Workflow
+### Lab Workflow
 
 ```mermaid
 sequenceDiagram
+    participant A as Attacker (Host1)
+    participant S as Sniffer/IDS (Host2)
+    participant V as Victim (Host3)
+    participant SW as Switch
     participant User
-    participant Attacker (Host1)
-    participant Sniffer (Host2)
-    participant Victim (Host3)
-    participant Switch
 
-    %% Setup Phase
-    User->>Attacker: Run setup_attacker.sh
-    User->>Sniffer: Run setup_sniffer.sh
-    User->>Victim: Run setup_victim.sh
-    User->>Sniffer: Run configure_switch_mirror.py (to Switch)
-    Sniffer-->>Switch: Configure SPAN
+    User->>S: Run `setup_sniffer.sh` (incl. Docker, Snort, Wireshark)
+    User->>S: Run `configure_switch_mirror.py` (Setup SPAN)
+    User->>A: Run `setup_attacker.sh`
+    User->>V: Run `setup_victim.sh` (Starts NC listeners)
 
-    %% Attack & Detection Phase 1 (Manual with Wireshark)
-    User->>Sniffer: Start Wireshark
-    User->>Attacker: Run run_attacks.sh (targets Victim)
-    Attacker->>Victim: Launch DoS Attacks (via Switch)
-    Switch->>Sniffer: Forward Mirrored Traffic
-    Sniffer->>User: Observe in Wireshark
+    loop Part 1: Manual Detection (Wireshark)
+        User->>S: Start Wireshark capture on mirrored port
+        User->>A: Execute `run_attacks.sh` (e.g., Land Attack)
+        A->>V: Land Attack packets (via Switch)
+        SW->>S: Mirrored Land Attack packets
+        User->>S: Observe Wireshark, identify attack
+        User->>A: Stop attack script
+        User->>S: Stop Wireshark capture, save if needed
+        User->>A: Repeat for SYN Flood, Teardrop
+    end
 
-    %% Attack & Detection Phase 2 (Automated with Snort)
-    User->>Sniffer: Start Snort (start_snort.sh)
-    User->>Attacker: Run run_attacks.sh (targets Victim)
-    Attacker->>Victim: Launch DoS Attacks (via Switch)
-    Switch->>Sniffer: Forward Mirrored Traffic
-    Sniffer->>Sniffer: Snort Detects Attacks
-    Sniffer->>User: Check Snort Alerts/Logs
+    loop Part 2: Automated Detection (Snort)
+        User->>S: Run `start_snort.sh` (Builds & starts Snort container)
+        User->>A: Execute `run_attacks.sh` (e.g., Land Attack)
+        A->>V: Land Attack packets (via Switch)
+        SW->>S: Mirrored Land Attack packets
+        S->>S: Snort detects attack based on `custom.rules`
+        S-->>User: Snort logs alert in `/var/log/snort/alert` (inside container)
+        User->>A: Stop attack script
+        User->>A: Repeat for SYN Flood, Teardrop
+    end
 
-    %% Cleanup Phase
-    User->>Attacker: Run cleanup_attacker.sh
-    User->>Sniffer: Run cleanup_sniffer.sh (stops Snort, attempts SPAN revert)
-    User->>Victim: Run cleanup_victim.sh
-    Sniffer-->>Switch: (Attempt to) Revert SPAN
+    User->>A: Run `cleanup_attacker.sh`
+    User->>S: Run `cleanup_sniffer.sh` (Stops Snort, prompts for SPAN revert)
+    User->>S: Run `configure_switch_mirror.py --revert` (Revert SPAN)
+    User->>V: Run `cleanup_victim.sh`
+
 ```
 
 ## Prerequisites
