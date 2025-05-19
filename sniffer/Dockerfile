@@ -2,39 +2,50 @@
 # Base image: Ubuntu 22.04 (Jammy Jellyfish)
 FROM ubuntu:22.04 AS builder
 
-ARG SNORT_VERSION=3.1.80.0
-ARG DAQ_VERSION=3.0.14
+ARG SNORT_VERSION=3.7.4.0
+ARG DAQ_VERSION=3.0.19
 
 ENV DEBIAN_FRONTEND=noninteractive \
     MY_SNORT_LUA_PATH=/usr/local/etc/snort \
     SNORT_LUA_PATH=/usr/local/etc/snort
 
+# Create a dummy update-rc.d to prevent dnet-common postinst failures
+RUN echo '#!/bin/sh' > /usr/sbin/update-rc.d && \
+    echo 'echo "update-rc.d: $*" >> /tmp/update-rc.d.log' >> /usr/sbin/update-rc.d && \
+    echo 'exit 0' >> /usr/sbin/update-rc.d && \
+    chmod +x /usr/sbin/update-rc.d
+
 # 1. Install build dependencies and common tools
-RUN apt-get update && apt-get install -y --no-install-recommends \\\
-    build-essential \\\
-    cmake \\\
-    flex \\\
-    bison \\\
-    git \\\
-    wget \\\
-    curl \\\
-    pkg-config \\\
-    libpcap-dev \\\
-    libpcre3-dev \\\
-    libdumbnet-dev \\\
-    libssl-dev \\\
-    zlib1g-dev \\\
-    luajit \\\
-    libluajit-5.1-dev \\\
-    libhwloc-dev \\\
-    liblzma-dev \\\
-    openssl \\\
-    ragel \\\
-    asciidoctor \\\
-    dnet-common \\\
-    libtool \\\
-    autoconf \\\
-    automake \\\
+RUN apt update && apt install -y --no-install-recommends \
+    apt-utils \
+    build-essential \
+    cmake \
+    flex \
+    bison \
+    libfl-dev \
+    git \
+    wget \
+    curl \
+    pkg-config \
+    libpcap-dev \
+    libpcre3-dev \
+    libpcre2-dev \
+    libdumbnet-dev \
+    libssl-dev \
+    zlib1g-dev \
+    luajit \
+    libluajit-5.1-dev \
+    libhwloc-dev \
+    liblzma-dev \
+    openssl \
+    ragel \
+    asciidoctor \
+    dnet-common \
+    libtool \
+    autoconf \
+    automake \
+    libgoogle-perftools-dev \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /tmp/snort_src
@@ -59,15 +70,14 @@ RUN if [ -n "$SNORT_VERSION" ]; then \
     else \
         git clone https://github.com/snort3/snort3.git && cd snort3; \
     fi && \
-    ./configure_cmake.sh --prefix=/usr/local --enable-tcmalloc --enable-jemalloc --enable-debug && \
+    ./configure_cmake.sh --prefix=/usr/local --enable-tcmalloc --enable-debug && \
     cd build && \
     make -j$(nproc) && \
     make install && \
     cd ../.. && rm -rf snort3*
 
 # Create necessary directories for Snort
-RUN mkdir -p /usr/local/etc/snort/rules \
-    && mkdir -p /usr/local/etc/snort/preproc_rules \
+RUN mkdir -p /usr/local/etc/snort/preproc_rules \
     && mkdir -p /usr/local/etc/snort/builtin_rules \
     && mkdir -p /var/log/snort \
     && mkdir -p /usr/local/lib/snort_dynamicrules \
@@ -85,27 +95,35 @@ ENV DEBIAN_FRONTEND=noninteractive \
     SNORT_LUA_PATH=/usr/local/etc/snort \
     PATH="/usr/local/bin:/usr/local/sbin:${PATH}"
 
+# Ensure the base directory for Snort config exists and is writable by root before copying files into it
+RUN mkdir -p /usr/local/etc/snort && chmod 755 /usr/local/etc/snort
+
 # Install runtime dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \\\
-    libpcap0.8 \\\
-    libpcre3 \\\
-    libdumbnet1 \\\
-    libssl3 \\\
-    zlib1g \\\
-    libluajit-5.1-2 \\\
-    libhwloc15 \\\
-    liblzma5 \\\
-    dumbnet-tools \\\
-    iproute2 \\\
-    net-tools \\\
-    curl \\\
-    wget \\\
-    vim-tiny \\\
-    tcpdump \\\
+RUN apt-get clean \
+    && apt-get update && apt-get install -y --no-install-recommends \
+    libpcap0.8 \
+    libpcre3 \
+    libdumbnet1 \
+    libssl3 \
+    zlib1g \
+    libluajit-5.1-2 \
+    libhwloc15 \
+    liblzma5 \
+    libunwind8 \
+    libnuma1 \
+    libgoogle-perftools4 \
+    iproute2 \
+    net-tools \
+    curl \
+    vim \
+    nano \
+    tcpdump \
+    tshark \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy Snort installation from builder stage
-COPY --from=builder /usr/local /usr/local/
+# Copy Snort and DAQ from builder stage
+COPY --from=builder /usr/local/ /usr/local/
 COPY --from=builder /tmp/snort_src /tmp/snort_src/
 
 # Copy Snort directories (already created in builder, but ensures ownership and layers)
@@ -115,6 +133,8 @@ COPY --from=builder /usr/local/lib/snort_dynamicrules /usr/local/lib/snort_dynam
 COPY --from=builder /usr/local/lib/snort_dynamicengine /usr/local/lib/snort_dynamicengine/
 COPY --from=builder /usr/local/lib/snort_dynamicpreprocessor /usr/local/lib/snort_dynamicpreprocessor/
 
+# Ensure the target directory for the rules volume mount exists in the final image
+RUN mkdir -p /usr/local/etc/snort/rules
 
 # Placeholder for Snort configuration files and rules
 # These will typically be mounted via docker-compose.

@@ -5,32 +5,26 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      # Optionally pass build arguments if you need to override defaults in Dockerfile
-      # args:
-      #   SNORT_VERSION: 3.1.70.0
-      #   DAQ_VERSION: 3.0.12
-    image: dos_test/snort3 # You can tag the image
+    image: dos_test/snort3:latest
     container_name: snort_ids
-    restart: unless-stopped
+    privileged: true
+    network_mode: "host"
 
     # --- Critical for Snort: Network & Privileges ---
-    network_mode: "host"  # Use host networking to allow Snort to see all host interfaces
-    privileged: true      # Needed for Snort to put interfaces into promiscuous mode and access raw sockets
     cap_add:
       - NET_ADMIN        # For network interface configuration
       - NET_RAW          # For raw packet access
       - SYS_NICE         # To allow Snort to raise its priority
+      - IPC_LOCK         # Added for potential mmap requirements
 
     # --- Volumes for Configuration, Rules, and Logs ---
     # Mount local directories into the container
     volumes:
-      - ./snort_config:/usr/local/etc/snort:ro # Mount your snort.lua and other .lua configs (read-only)
-      - ./rules:/usr/local/etc/snort/rules:ro  # Mount your custom rules (read-only)
-      # - ./builtin_rules:/usr/local/etc/snort/builtin_rules:ro # If you have local builtin_rules
-      # - ./preproc_rules:/usr/local/etc/snort/preproc_rules:ro # If you have local preproc_rules
+      - ./snort_config/snort.lua:/usr/local/etc/snort/snort.lua:ro
+      - ./snort_config/snort_defaults.lua:/usr/local/etc/snort/snort_defaults.lua:ro
+      - ./snort_config/file_magic.lua:/usr/local/etc/snort/file_magic.lua:ro
+      - ./rules:/usr/local/etc/snort/rules:ro # Mount your custom rules (read-only)
       - ./snort_logs:/var/log/snort            # Mount a directory for Snort logs (read-write)
-      # Optional: If you need to pass specific CA certificates or other files
-      # - /etc/ssl/certs/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt:ro
 
     # --- Environment Variables ---
     # These can override or supplement settings in snort.lua or be used by wrapper scripts
@@ -48,24 +42,20 @@ services:
     # The -l /var/log/snort specifies the logging directory (already mounted).
     # The --pcap-filter can be used if you want to apply a BPF filter.
     # Ensure the interface (e.g., eth0) exists and is the one mirrored by the switch.
-    command: >
-      snort -c /usr/local/etc/snort/snort.lua 
-            -R /usr/local/etc/snort/snort.lua # Also treat snort.lua as the main rules file for IPS policy mode if needed, or just use -c for IDS
-            -i eth0                   # <<<<< IMPORTANT: Replace eth0 with your actual sniffing interface on Host2
-            -l /var/log/snort         # Log directory
-            -A full                   # Alert mode (full alerts)
-            -k none                   # Checksum mode (none, all, etc.)
-            --rule-path /usr/local/etc/snort/rules # Explicitly set rule path
-            # --pcap-filter "not host 127.0.0.1" # Example BPF filter
-            # --create-pidfile          # Creates a PID file
-            # -D                        # Run in daemon mode (background)
-
-    # Healthcheck (optional, basic example)
-    # healthcheck:
-    #   test: ["CMD-SHELL", "pgrep snort || exit 1"]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 3
+    # command: >
+    #   snort -c /usr/local/etc/snort/snort.lua 
+    #         -R /usr/local/etc/snort/snort.lua # Also treat snort.lua as the main rules file for IPS policy mode if needed, or just use -c for IDS
+    #         -i eth0                   # <<<<< IMPORTANT: Replace eth0 with your actual sniffing interface on Host2
+    #         -l /var/log/snort         # Log directory
+    #         -A full                   # Alert mode (full alerts)
+    #         -k none                   # Checksum mode (none, all, etc.)
+    #         --rule-path /usr/local/etc/snort/rules # Explicitly set rule path
+    #         # --pcap-filter "not host 127.0.0.1" # Example BPF filter
+    #         # --create-pidfile          # Creates a PID file
+    #         # -D                        # Run in daemon mode (background)
+    # command: ["tail", "-f", "/dev/null"] # Keep container running for debugging
+    command: ["snort", "-c", "/usr/local/etc/snort/snort.lua", "-i", "eth0", "-A", "alert_fast", "-s", "65535", "-k", "none", "-l", "/var/log/snort"]
+    # restart: unless-stopped # Optional: restart policy
 
 # Optional: Define named volumes if you prefer them over bind mounts for logs
 # volumes:
