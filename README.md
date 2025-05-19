@@ -93,7 +93,7 @@ sequenceDiagram
 
 1.  **Three Hosts**: Prepare three machines (VMs or physical) that can communicate with each other. Let's assume their IP addresses will be:
     *   Attacker (Host1): e.g., `192.168.1.101`
-    *   Sniffer (Host2): e.g., `192.168.1.102` (This is the machine where these scripts are cloned and run from primarily)
+    *   Sniffer (Host2): e.g., `192.168.1.102`
     *   Victim (Host3): e.g., `192.168.1.103`
 2.  **Network Connectivity**: Ensure all hosts are on the same network segment or can route to each other.
 3.  **Switch with Port Mirroring (SPAN)**: A managed switch capable of port mirroring is required to send copies of network traffic from the Attacker and Victim ports to the Sniffer port.
