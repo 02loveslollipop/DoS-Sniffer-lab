@@ -12,12 +12,13 @@ services:
       - NET_RAW
       - SYS_NICE
       - IPC_LOCK
-    network_mode: "host"
 
     volumes:
       - ./rules:/etc/snort/rules:ro
-    #   - ./snort_logs:/var/log/snort:rw
+    #  - ./snort_logs:/var/log/snort:rw
+    #  - ../pcaps:/mnt/pcaps:ro
 
     environment:
       TZ: "Etc/UTC"
-    command: ["/bin/sh", "-c", "cat /etc/snort/rules/local.rules ; delay 5 ; snort -i eno1 -c /etc/snort/etc/snort.conf -A console -l /var/log/snort -u snort -g snort"]
+    user: "1000:1000"
+    command: ["/bin/sh", "-c", "snort -A full -c /etc/snort/etc/snort.conf -r /mnt/pcaps/attacks.pcap -l /var/log/snort ; cat /var/log/snort/alert"]

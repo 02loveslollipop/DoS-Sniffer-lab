@@ -5,11 +5,8 @@ FROM linton/docker-snort
 # Snort configuration is typically expected at /etc/snort/etc/snort.conf
 # Rules are typically in /etc/snort/rules/
 
-# Create snort user and group
-RUN groupadd snort && useradd -r -g snort -s /sbin/nologin -c "Snort IDS" snort
-
 # Ensure standard log directory exists (though likely present in base)
-RUN mkdir -p /var/log/snort && chown -R snort:snort /var/log/snort && chmod 700 /var/log/snort
+RUN mkdir -p /var/log/snort && chmod 777 /var/log/snort
 
 # Ensure custom rules directory exists for mounting (though likely present in base)
 RUN mkdir -p /etc/snort/rules
