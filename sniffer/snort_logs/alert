@@ -1,0 +1,24 @@
+[**] [1:1000003:1] LAND Attack Detected [**]
+[Priority: 0] 
+05/20-03:36:34.042971 127.0.0.1:139 -> 127.0.0.1:139
+TCP TTL:64 TOS:0x0 ID:1 IpLen:20 DgmLen:40
+******S* Seq: 0x0  Ack: 0x0  Win: 0x2000  TcpLen: 20
+
+[**] [1:1000003:1] LAND Attack Detected [**]
+[Priority: 0] 
+05/20-03:36:34.043016 127.0.0.1:139 -> 127.0.0.1:139
+TCP TTL:64 TOS:0x0 ID:0 IpLen:20 DgmLen:40 DF
+*****R** Seq: 0x1  Ack: 0x0  Win: 0x0  TcpLen: 20
+
+[**] [1:1000003:1] LAND Attack Detected [**]
+[Priority: 0] 
+05/20-03:36:34.042971 127.0.0.1:139 -> 127.0.0.1:139
+TCP TTL:64 TOS:0x0 ID:1 IpLen:20 DgmLen:40
+******S* Seq: 0x0  Ack: 0x0  Win: 0x2000  TcpLen: 20
+
+[**] [1:1000003:1] LAND Attack Detected [**]
+[Priority: 0] 
+05/20-03:36:34.043016 127.0.0.1:139 -> 127.0.0.1:139
+TCP TTL:64 TOS:0x0 ID:0 IpLen:20 DgmLen:40 DF
+*****R** Seq: 0x1  Ack: 0x0  Win: 0x0  TcpLen: 20
+

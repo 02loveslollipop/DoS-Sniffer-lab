@@ -28,11 +28,10 @@ else
     exit 1
 fi
 
-echo "Starting Snort container in detached mode..."
-if docker-compose up -d; then
-    echo "Snort container started successfully."
-    echo "To view logs, use: docker-compose logs -f snort"
-    echo "To stop the container, use: docker-compose down"
+echo "Starting Snort container..."
+echo "To exit the container, use Ctrl+C."
+if docker-compose up; then
+    echo "Snort container exited successfully."
 else
     echo "Error: Failed to start Snort container." >&2
     exit 1

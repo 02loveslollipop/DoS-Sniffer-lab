@@ -1,4 +1,11 @@
-alert tcp any any -> any any (msg:"TCP SYN Flood Attempt"; flags:S; flow:stateless; detection_filter:track by_dst, count 70, seconds 10; sid:1000002; rev:1;)
-alert tcp any any -> any any (msg:"LAND Attack Detected"; flow:established; lua:land_detector.check(); sid:1000003; rev:1;)
-alert ip any any -> any any (msg:"Teardrop Fragment Attack"; fragoffset:0; fragbits:M; dsize:<40; sid:1000004; rev:1;)
+# Snort 2.x Rules
 
+# TCP SYN Flood Attempt
+alert tcp any any -> any any (msg:"TCP SYN Flood Attempt"; flags:S; flow:stateless; detection_filter:track by_dst, count 70, seconds 10; sid:1000002; rev:1;)
+
+# LAND Attack Detected
+# Uses same_ip for Snort 2.x
+alert ip any any -> any any (msg:"LAND Attack Detected"; same_ip; sid:1000003; rev:1;)
+
+# Teardrop Fragment Attack
+alert ip any any -> any any (msg:"Teardrop Fragment Attack"; fragoffset:0; fragbits:M; dsize:<40; sid:1000004; rev:1;)
